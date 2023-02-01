@@ -12,6 +12,10 @@ struct ContentView: View {
     @State var rootWord = ""
     @State var newWord = ""
     
+    @State var errorTitle = ""
+    @State var errorMessage = ""
+    @State var showingError = false
+    
     var body: some View {
         NavigationView {
             List {
@@ -32,12 +36,32 @@ struct ContentView: View {
             .navigationTitle(rootWord)
             .onSubmit(addNewWord)
             .onAppear(perform: startGame)
+            .alert(errorTitle, isPresented: $showingError) {
+                Button("Ok", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
     
     func addNewWord() {
         let answer = newWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         guard answer.count > 0 else { return }
+        
+        
+        guard isOriginal(word: answer) else {
+            wordError(title: "Word used already", message: "New word please.")
+            return
+        }
+        
+        guard isPossible(word: answer) else {
+            wordError(title: "Word not possible", message: "Not a form of your rootword \(rootWord).")
+            return
+        }
+        guard isReal(word: answer) else {
+            wordError(title: "Word not recognized", message: "Please provide a real word.")
+            return
+        }
         
         withAnimation {
             usedWords.insert(answer, at: 0)
@@ -71,6 +95,18 @@ struct ContentView: View {
             }
         }
         return true
+    }
+    func isReal(word: String) -> Bool {
+        let checker = UITextChecker()
+        let range = NSRange(location: 0, length: word.utf16.count)
+        let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: range, startingAt: 0, wrap: false, language: "en")
+        
+        return misspelledRange.location == NSNotFound
+    }
+    func wordError(title: String, message: String) {
+        errorTitle = title
+        errorMessage = message
+        showingError = true
     }
 }
 
